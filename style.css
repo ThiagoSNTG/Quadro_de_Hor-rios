@@ -15,3 +15,10 @@
 .import-confirm-bar .btn{white-space:nowrap}
 .import-confirm-bar .btn:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:600px){.import-confirm-bar{flex-direction:column;align-items:stretch}.import-confirm-bar .btn{width:100%}}
+
+/* Exclusão múltipla, com destaque visual e segurança por filtro */
+.delete-filtered{border-color:#e6b5b8;background:#fff6f6;color:#9a2028;white-space:nowrap}
+.delete-filtered:hover{background:#fce5e6}
+.delete-filtered:disabled{opacity:.5;cursor:wait}
+.toolbar{align-items:center;flex-wrap:wrap}
+@media(max-width:600px){.delete-filtered{width:100%}}

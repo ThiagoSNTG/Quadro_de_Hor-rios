@@ -161,3 +161,37 @@ $('#downloadImportTemplate').addEventListener('click',async()=>{
     toast('Modelo Excel baixado');
   }catch(err){alert('Erro ao criar o modelo Excel: '+err.message);}
 });
+
+// Exclusão em lote dos registros apresentados nos filtros atuais.
+// Por segurança, exige uma unidade específica ou um texto de busca preenchido.
+function visibleDeleteRows(store){
+ const unit=$('#unitFilter').value;
+ const base=records[store].filter(r=>!unit||r.unidade===unit);
+ if(store==='docentes'){
+  const q=norm($('#searchDocs').value);
+  return {rows:base.filter(r=>norm(r.nome).includes(q)),safe:!!unit||!!q};
+ }
+ if(store==='aulas'){
+  const q=norm($('#searchAulas').value);
+  return {rows:base.filter(r=>norm([r.curso,r.turma,r.disciplina,teacher(r.matricula,r.unidade)?.nome].join(' ')).includes(q)),safe:!!unit||!!q};
+ }
+ return {rows:base,safe:!!unit};
+}
+document.querySelectorAll('[data-bulk-delete]').forEach(button=>button.addEventListener('click',async()=>{
+ const store=button.dataset.bulkDelete,{rows,safe}=visibleDeleteRows(store);
+ if(!safe){alert('Selecione uma unidade no topo ou digite um filtro de pesquisa antes de excluir vários registros.');return;}
+ if(!rows.length){toast('Não há registros correspondentes ao filtro');return;}
+ if(store==='docentes'){
+  const linked=rows.filter(d=>[...records.aulas,...records.extras].some(r=>key(r.matricula,r.unidade)===d.key));
+  if(linked.length){alert(`${linked.length} docente(s) possuem aulas ou atividades vinculadas. Exclua primeiro essas atividades ou ajuste o filtro. Nenhum docente foi excluído.`);return;}
+ }
+ const label={docentes:'docentes',aulas:'aulas',extras:'atividades extras'}[store];
+ const answer=prompt(`ATENÇÃO: excluir permanentemente ${rows.length} ${label} deste navegador?\n\nA operação não poderá ser desfeita sem um backup JSON.\n\nDigite EXCLUIR para confirmar:`);
+ if(answer!=='EXCLUIR'){if(answer!==null)toast('Exclusão cancelada: confirmação inválida');return;}
+ button.disabled=true;
+ try{
+  await transact(store,os=>rows.forEach(r=>os.delete(store==='docentes'?r.key:r.id)));
+  await reload();toast(`${rows.length} registros excluídos`);
+ }catch(err){alert('Não foi possível excluir os registros: '+err.message)}
+ finally{button.disabled=false}
+}));
