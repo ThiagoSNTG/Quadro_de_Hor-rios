@@ -75,3 +75,51 @@ $('#startImport').addEventListener('click',()=>{
   // Usa a mesma validação e prévia já existentes na importação de arquivos.
   file.onchange({target:file});
 });
+
+// Modelo de importação gerado no navegador, sem alterar os cadastros locais.
+$('#downloadImportTemplate').addEventListener('click',async()=>{
+  if(!window.ExcelJS){alert('Não foi possível carregar a biblioteca ExcelJS. Verifique a conexão com a internet.');return;}
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Gestão Docente · Univassouras';
+  const sheets=[
+    {name:'Docentes',headers:['Nome','Matricula','Centro de Custo'],rows:[['Professor Exemplo A','000123','CC-ENF-01'],['Professora Exemplo B','000124','CC-PSI-01']],widths:[43,22,28]},
+    {name:'Aulas',headers:['Matricula','Curso','Turma','Dia','Horario de inicio','Horario de termino','Disciplina','Modalidade','CH TOTVS','Composicao Salarial','CH PAGA','N alunos'],rows:[['000123','Enfermagem','4º Período - Turma A','3ª Feira','18:50','22:10','Anatomia Humana','Presencial',4,'Sim',4,32],['000124','Psicologia','2º Período - Turma A','4ª Feira','18:50','22:10','Psicologia Geral','Presencial',4,'Não',0,29]],widths:[18,26,29,17,19,20,37,18,15,23,15,14]},
+    {name:'Extras',headers:['Matricula','Atividade Extra','Dia','Horario','Carga Horaria','Compoe Salario','Centro de Custo'],rows:[['000123','Membro do NDE','5ª Feira','14:00 a 16:00',2,'Sim','CC-ENF-01']],widths:[20,39,17,24,20,20,26]}
+  ];
+  for(const spec of sheets){
+    const ws=wb.addWorksheet(spec.name);ws.addRow(spec.headers);
+    for(const row of spec.rows)ws.addRow(row);
+    ws.getRow(1).height=29;
+    ws.getRow(1).eachCell(cell=>{cell.font={bold:true,color:{argb:'FFFFFFFF'}};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF6D1D20'}};cell.alignment={vertical:'middle'}});
+    spec.widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+    ws.getColumn(1).numFmt='@';
+    if(spec.name==='Docentes')ws.getColumn(2).numFmt='@';
+    ws.views=[{state:'frozen',ySplit:1}];
+    ws.autoFilter={from:{row:1,column:1},to:{row:spec.rows.length+1,column:spec.headers.length}};
+    for(let r=2;r<=spec.rows.length+1;r++)ws.getRow(r).eachCell(cell=>{cell.alignment={vertical:'middle'};cell.border={bottom:{style:'hair',color:{argb:'FFE5E7EB'}}}});
+  }
+  const info=wb.addWorksheet('INSTRUCOES');
+  info.addRows([
+    ['MODELO DE IMPORTAÇÃO · GESTÃO DOCENTE'],
+    ['1','Importe primeiro a aba Docentes; em seguida, Aulas e Extras.'],
+    ['2','Na tela de importação, selecione o tipo de conteúdo e a unidade (Saquarema, Maricá ou FACMAR).'],
+    ['3','No campo Nome exato da aba, informe Docentes, Aulas ou Extras, conforme a importação.'],
+    ['4','As linhas existentes são fictícias. Substitua-as pelos dados reais ou exclua-as.'],
+    ['5','Não renomeie os cabeçalhos. A matrícula identifica o docente dentro de cada unidade.'],
+    ['6','Mantenha as matrículas como texto para preservar zeros à esquerda.'],
+    ['7','Para unidades diferentes, importe a mesma aba separadamente e selecione a unidade correta.'],
+    ['8','As aulas e atividades extras exigem que a matrícula já esteja cadastrada na unidade.'],
+    ['9','CH TOTVS, CH PAGA e Carga Horaria devem ser valores numéricos.'],
+    ['10','Composição salarial: preencha Sim ou Não.'],
+    ['11','Após selecionar o arquivo, clique em Ler arquivo e visualizar prévia e confirme a importação.']
+  ]);
+  info.getColumn(1).width=48;info.getColumn(2).width=110;
+  info.getRow(1).font={bold:true,size:15,color:{argb:'FF6D1D20'}};
+  info.getColumn(2).alignment={wrapText:true,vertical:'middle'};
+  for(let r=2;r<=info.rowCount;r++)info.getRow(r).height=30;
+  try{
+    const data=await wb.xlsx.writeBuffer();
+    download('Modelo_Importacao_Gestao_Docente.xlsx',data,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast('Modelo Excel baixado');
+  }catch(err){alert('Erro ao criar o modelo Excel: '+err.message);}
+});
